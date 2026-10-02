@@ -1,0 +1,37 @@
+{
+  "name": "pcdi-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Person-Centric Data Intelligence — API gateway, domain services and collection worker (NestJS 11)",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "start:worker": "node dist/worker.js",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "test": "tsc -p tsconfig.json --outDir dist-test && node --test \"dist-test/**/*.spec.js\""
+  },
+  "dependencies": {
+    "@nestjs/common": "11.2.6",
+    "@nestjs/core": "11.2.6",
+    "@nestjs/jwt": "11.0.2",
+    "@nestjs/platform-express": "11.2.6",
+    "@opensearch-project/opensearch": "3.9.0",
+    "bcryptjs": "3.0.3",
+    "bullmq": "6.3.8",
+    "compromise": "14.17.0",
+    "ioredis": "6.0.0",
+    "libphonenumber-js": "1.13.13",
+    "minio": "8.0.7",
+    "neo4j-driver": "6.2.0",
+    "pg": "8.23.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/multer": "2.2.0",
+    "@types/node": "24.13.6",
+    "@types/pg": "8.23.1",
+    "typescript": "5.9.3"
+  }
+}

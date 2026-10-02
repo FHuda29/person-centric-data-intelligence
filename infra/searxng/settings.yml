@@ -1,0 +1,24 @@
+# SearXNG — self-hosted metasearch used by the `searxng.web` / `searxng.social` / `searxng.news` connectors.
+# Internal only (not published on a host port). The secret comes from SEARXNG_SECRET.
+use_default_settings: true
+
+general:
+  instance_name: "PCDI metasearch"
+
+server:
+  secret_key: "overridden-by-SEARXNG_SECRET"
+  limiter: false
+  image_proxy: false
+  public_instance: false
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "all"
+  formats:
+    - html
+    - json
+
+outgoing:
+  request_timeout: 6.0
+  max_request_timeout: 12.0
