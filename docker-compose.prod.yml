@@ -1,0 +1,131 @@
+name: pcdi
+
+# Production deployment for a shared, low-RAM VPS (3.8 GB) that already runs other
+# stacks behind a central Caddy reverse proxy on the external "edge" network.
+# Lean profile: OpenSearch and Neo4j are intentionally omitted — the API degrades
+# to its PostgreSQL full-text and BFS fallbacks (see SearchIndexService / GraphStoreService).
+# TLS and :80/:443 are owned by the existing Caddy; only `console` joins `edge`.
+
+x-api-env: &api-env
+  DATABASE_URL: postgres://${POSTGRES_USER:-pcdi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pcdi}
+  REDIS_URL: redis://redis:6379
+  # OPENSEARCH_URL / NEO4J_URL are left unset on purpose → code uses PostgreSQL fallbacks.
+  MINIO_ENDPOINT: minio
+  MINIO_PORT: "9000"
+  MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-pcdi}
+  MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+  MINIO_BUCKET: pcdi-evidence
+  JWT_SECRET: ${JWT_SECRET}
+  JWT_TTL: ${JWT_TTL:-8h}
+  ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+  ANALYST_USERNAME: ${ANALYST_USERNAME:-analyst}
+  ANALYST_PASSWORD: ${ANALYST_PASSWORD}
+  DEFAULT_PHONE_REGION: ${DEFAULT_PHONE_REGION:-ID}
+  AUTO_MERGE_DETERMINISTIC: ${AUTO_MERGE_DETERMINISTIC:-false}
+  BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+  NUMVERIFY_API_KEY: ${NUMVERIFY_API_KEY:-}
+  NUMVERIFY_BASE_URL: ${NUMVERIFY_BASE_URL:-http://apilayer.net/api/validate}
+  GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+  SEARXNG_URL: ""
+  NEWS_REGION: ${NEWS_REGION:-id-ID}
+  HTTP_USER_AGENT: ${HTTP_USER_AGENT:-PCDI-OSINT-Platform/1.0 (+case-based research; respects robots.txt)}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pcdi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-pcdi}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pcdi} -d ${POSTGRES_DB:-pcdi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 320m
+    networks: [internal]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+    mem_limit: 160m
+    networks: [internal]
+    restart: unless-stopped
+
+  minio:
+    # Official minio gated anonymous pulls on quay.io; Bitnami's frozen "legacy" image is
+    # the same MinIO server (S3-compatible) and pulls freely. Non-root (uid 1001), data in
+    # /bitnami/minio/data, own entrypoint (no `command`).
+    image: bitnamilegacy/minio:latest
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-pcdi}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_DEFAULT_BUCKETS: pcdi-evidence
+    volumes: [miniodata:/bitnami/minio/data]
+    ports: ["127.0.0.1:9001:9001"]   # admin console, localhost only (reach via SSH tunnel)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      retries: 20
+    mem_limit: 320m
+    networks: [internal]
+    restart: unless-stopped
+
+  api:
+    build: { context: ., dockerfile: services/api/Dockerfile }
+    image: pcdi/api:1.0.0
+    environment: *api-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      minio: { condition: service_started }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1"]
+      interval: 10s
+      retries: 30
+    mem_limit: 512m
+    networks: [internal]
+    restart: unless-stopped
+
+  worker:
+    image: pcdi/api:1.0.0
+    command: ["node", "dist/worker.js"]
+    environment:
+      <<: *api-env
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+    depends_on:
+      api: { condition: service_healthy }
+    mem_limit: 512m
+    networks: [internal]
+    restart: unless-stopped
+
+  console:
+    build: { context: ., dockerfile: apps/intelligence-console/Dockerfile }
+    image: pcdi/console:1.0.0
+    depends_on:
+      api: { condition: service_started }
+    mem_limit: 96m
+    networks:                    # edge = reached by the shared Caddy for layanan.onesolusi.id
+      internal: {}
+      edge:
+        aliases: [pcdi-console]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+
+networks:
+  internal:
+  edge:
+    external: true
+    name: edge

@@ -1,0 +1,18 @@
+# Ditambahkan ke Caddy Hotel ERP (proxy bersama port 80/443) — Person-Centric Data Intelligence.
+layanan.onesolusi.id {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	reverse_proxy pcdi-console:8080 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+	log {
+		output stdout
+		format console
+	}
+}
