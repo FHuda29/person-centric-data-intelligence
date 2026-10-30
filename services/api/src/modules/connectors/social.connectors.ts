@@ -1027,3 +1027,77 @@ export class SandbaseInstagramUsersConnector implements Connector {
     return out;
   }
 }
+
+/** Tier B — public TikTok videos and accounts through SandBase (`tiktok/app-v3/general-search-result`). */
+export class SandbaseTiktokSearchConnector implements Connector {
+  readonly def: SourceDefinition = {
+    ...SANDBASE_BASE,
+    key: 'sandbase.tiktok',
+    name: 'TikTok Search (SandBase)',
+    baseUrl: 'https://api.sandbase.ai/v1/run · tiktok/app-v3/general-search-result',
+    rateLimitPerMin: 20,
+    allowedFields: ['video description', 'author handle/name', 'created at', 'url', 'public account profile'],
+    inputTypes: ['PERSON', 'ORGANIZATION', 'USERNAME', 'EVENT', 'NARRATIVE'] as any,
+    outputTypes: ['ARTICLE', 'SOCIAL_ACCOUNT', 'PERSON'] as any,
+    description:
+      'Searches public TikTok (Top tab) for the phrase: candidate videos and the accounts that posted or match the name (1 call). Private data is never accessed. Requires SANDBASE_API_KEY.',
+  };
+
+  async run(input: TransformInput): Promise<ConnectorOutput> {
+    const out = emptyOutput();
+    const phrase = phraseOf(input);
+    const r = await sandbaseRun('tiktok/app-v3/general-search-result', { keyword: phrase, count: 25 });
+    out.observations.push({ ref: 'resp', url: 'sandbase:tiktok/app-v3/general-search-result', raw: r.raw, contentType: 'application/json', title: `TikTok search "${phrase}" (SandBase)` });
+
+    const handleOf = (a: any) => String(a?.unique_id ?? a?.uniqueId ?? a?.uniqueid ?? '').replace(/^@/, '');
+    const videos = new Map<string, Parameters<typeof mapPosts>[1][number]>();
+    const accounts = new Map<string, AccountHit>();
+    walk(r.data, (o) => {
+      const desc = typeof o.desc === 'string' ? o.desc : typeof o.description === 'string' ? o.description : null;
+      const awemeId = String(o.aweme_id ?? o.awemeId ?? (desc !== null ? o.id ?? '' : ''));
+      const author = (o.author ?? o.author_user_info ?? o.authorInfo) as any;
+      // a video node: has a description, a numeric aweme id and an author handle
+      if (desc !== null && /^\d{6,}$/.test(awemeId) && handleOf(author)) {
+        const handle = handleOf(author);
+        if (!videos.has(awemeId)) {
+          const t = Number(o.create_time ?? o.createTime);
+          videos.set(awemeId, {
+            platform: 'tiktok',
+            url: `https://www.tiktok.com/@${handle}/video/${awemeId}`,
+            title: `@${handle}: ${desc.slice(0, 120)}`,
+            text: desc,
+            author: handle,
+            authorName: author?.nickname ?? author?.nickName ?? null,
+            authorUrl: `https://www.tiktok.com/@${handle}`,
+            publishedAt: isoOrNull(t ? t * 1000 : null),
+            raw: o,
+          });
+        }
+      }
+      // an account node: carries a unique_id and a nickname but is not itself a video
+      const handle = handleOf(o);
+      const nick = o.nickname ?? o.nickName ?? null;
+      if (handle && nick && desc === null && !accounts.has(handle.toLowerCase())) {
+        accounts.set(handle.toLowerCase(), {
+          platform: 'tiktok',
+          handle,
+          url: `https://www.tiktok.com/@${handle}`,
+          name: nick,
+          bio: o.signature ?? o.bio ?? null,
+          raw: o,
+          extra: {
+            verified: typeof o.verification_type === 'number' ? o.verification_type > 0 : o.is_verified ?? null,
+            followers: o.follower_count ?? o.followerCount ?? null,
+            sec_uid: o.sec_uid ?? o.secUid ?? null,
+          },
+        });
+      }
+    });
+
+    mapPosts(out, [...videos.values()].slice(0, 50));
+    const kept = [...accounts.values()].filter(accountFilter(input)).slice(0, 15);
+    mapAccounts(out, kept, 'name/username match on TikTok (candidate)');
+    out.notes = [`${videos.size} TikTok video(s); ${kept.length} of ${accounts.size} TikTok account(s) match every name token`];
+    return out;
+  }
+}

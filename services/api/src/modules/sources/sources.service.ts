@@ -33,6 +33,7 @@ import {
   RedditapisSearchConnector,
   RedditSearchConnector,
   SandbaseInstagramUsersConnector,
+  SandbaseTiktokSearchConnector,
   SandbaseXSearchConnector,
   SearxNewsConnector,
   SearxSocialConnector,
@@ -94,6 +95,7 @@ export class SourcesService {
       new RedditapisSearchConnector(),
       new SandbaseXSearchConnector(),
       new SandbaseInstagramUsersConnector(),
+      new SandbaseTiktokSearchConnector(),
       new DemoDatasetConnector(),
       ...internalSources(),
     ];

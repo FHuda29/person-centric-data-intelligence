@@ -57,7 +57,7 @@ Struktur repo mengikuti §15.1: `apps/intelligence-console`, `services/api`, `db
 | C | GDELT DOC 2.0 | Person/Org/Phone → berita (timeline & narrative) |
 | A | Bluesky (akun) · Mastodon/Fediverse (akun, termasuk Threads yang ber-federasi) · Stack Overflow · GitHub (cari nama) · Hacker News | Person/Username → akun kandidat & postingan |
 | A | Reddit · YouTube Data API · X API v2 · Bluesky (postingan) *(butuh kredensial, lihat `.env.example`)* | Person/Org → postingan publik |
-| B | SandBase *(butuh `SANDBASE_API_KEY`, berbayar per panggilan, default PENDING)*: X (postingan + akun), Instagram (akun) | Person/Username → postingan & akun kandidat |
+| B | SandBase *(butuh `SANDBASE_API_KEY`, berbayar per panggilan, default PENDING)*: X (postingan + akun), Instagram (akun), TikTok (video + akun) | Person/Username → postingan & akun kandidat |
 | B | RedditAPIs *(butuh `REDDITAPIS_TOKEN`, pihak ketiga, berbayar per panggilan)* | Person/Org → postingan Reddit |
 | B | numverify/APILayer *(butuh `NUMVERIFY_API_KEY`, berbayar per panggilan, default PENDING)* | Phone → validitas, carrier, line type, negara numbering plan |
 | C | SearXNG self-hosted: web, **media sosial via indeks mesin pencari** (Facebook, Instagram, Threads, LinkedIn, X, TikTok, YouTube), berita | Search expansion §3.1 → URL, profil kandidat, artikel |
@@ -105,3 +105,8 @@ cd apps/intelligence-console && npm ci && npx ng serve               # :4200, pr
 OIDC/SSO eksternal (saat ini JWT lokal + TOTP), OpenTelemetry/Prometheus, parsing PDF, connector berlisensi (Tier B),
 dan integrasi ontology maritim (Vessel/IMO/MMSI, §17.1) belum diimplementasikan. Implementasi produksi harus direview
 terhadap UU PDP, terms tiap sumber, dan kebijakan internal — dokumen ini bukan pendapat hukum.
+
+
+## API Key
+https://www.sandbase.ai/docs/developer/usage#api-keys
+sk-e46fba24efa6059f8651a820c066297a73155cf094b203beb0a42bfecf0c30bf
