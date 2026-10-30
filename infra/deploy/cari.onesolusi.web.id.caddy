@@ -1,0 +1,15 @@
+# PCDI Intelligence Console — stack di ~/pcdi (docker-compose.prod.yml, EDGE_NETWORK=gamevora_default).
+# Container console (nginx, alias "pcdi-console") menyajikan SPA dan meneruskan /api ke API internal.
+cari.onesolusi.web.id {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	reverse_proxy pcdi-console:8080
+}

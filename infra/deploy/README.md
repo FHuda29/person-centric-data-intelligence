@@ -1,26 +1,37 @@
 # Deploy ke VPS
 
-Produksi berjalan di VPS Biznet `103.93.163.188` (user `sysdev`), di `/opt/pcdi`,
-di belakang **Caddy bersama** (`hotel-erp-web-1`) via network docker eksternal `edge`.
-Domain: **https://layanan.onesolusi.id**. Profil **lean** (tanpa OpenSearch/Neo4j/SearXNG —
-API pakai fallback PostgreSQL). Lihat `docker-compose.prod.yml`.
+Ada dua target, masing-masing di `infra/deploy/targets/<nama>.env`:
+
+| Target | VPS | Direktori | Domain | Caddy bersama (network) |
+|---|---|---|---|---|
+| `layanan` (default) | `103.93.163.188` (user `sysdev`) | `/opt/pcdi` | https://layanan.onesolusi.id | `hotel-erp-web-1` (`edge`) |
+| `cari` | `139.190.104.27` (user `sysadmin`, key `MajuMapan.pem`) | `~/pcdi` | https://cari.onesolusi.web.id | `gamevora-caddy-1` (`gamevora_default`) |
+
+Profil **lean** (tanpa OpenSearch/Neo4j/SearXNG — API pakai fallback PostgreSQL). Lihat `docker-compose.prod.yml`.
+Nama network proxy diatur lewat `EDGE_NETWORK` di `.env` server. API punya alias unik `pcdi-api` karena
+network proxy bersama juga berisi service `api` milik stack lain.
 
 ## Update rutin (sekali perintah)
 
 Dari mesin lokal (Git Bash):
 
 ```bash
-bash infra/deploy/deploy.sh            # bundle -> transfer -> build -> up -d
+bash infra/deploy/deploy.sh --target=cari  # target VPS #2 (cari.onesolusi.web.id)
+bash infra/deploy/deploy.sh            # target default "layanan": bundle -> transfer -> build -> up -d
 bash infra/deploy/deploy.sh --yes      # tanpa konfirmasi
 bash infra/deploy/deploy.sh --no-build # redeploy tanpa rebuild
 bash infra/deploy/deploy.sh --with-caddy   # sekaligus (re)install site + reload Caddy
 ```
 
-Override lewat env bila perlu: `VPS_HOST`, `VPS_USER`, `SSH_KEY`, `REMOTE_DIR`.
+Override lewat env bila perlu: `VPS_HOST`, `VPS_USER`, `SSH_KEY`, `REMOTE_DIR` (menang atas file target).
 Script **tidak** menyentuh `/opt/pcdi/.env` maupun volume data (pgdata/redisdata/miniodata).
 Migrasi DB jalan otomatis saat API boot.
 
 ## Setup pertama kali (manual, sekali saja)
+
+Contoh untuk target `layanan`. Untuk `cari`: direktori `~/pcdi`, user `sysadmin`, dan tambahkan
+`EDGE_NETWORK=gamevora_default` ke `.env`; site Caddy = `infra/deploy/cari.onesolusi.web.id.caddy`
+→ `~/gamevora/deploy/sites/`.
 
 ```bash
 # 1) direktori

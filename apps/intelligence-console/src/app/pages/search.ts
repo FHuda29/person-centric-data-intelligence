@@ -194,7 +194,7 @@ function platformOf(url: string, sourceKey: string): string {
           <div class="small muted mb">{{ r.total }} content hit(s) · engine {{ r.engine }} · query is audited
             @if (r.facets?.sources?.length) { · @for (f of r.facets.sources; track f.key) { <a (click)="source = f.key; runCollected()" style="cursor:pointer">{{ f.key }} ({{ f.doc_count }})</a>&ngsp;} }
             @if (source) { · <a (click)="source = ''; runCollected()" style="cursor:pointer">clear source filter</a> }</div>
-          <div class="grid" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr)">
+          <div class="grid hits-grid">
             <div class="card flush">
               <div class="card-h"><h4>Collected content</h4></div>
               @for (h of r.content; track h.id) {
@@ -252,7 +252,8 @@ function platformOf(url: string, sourceKey: string): string {
     .qwrap input { width: 100%; height: 42px; padding-left: 40px; font-size: 15px; border-radius: 10px; }
     .go { height: 42px; padding: 0 20px; }
     .filters { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 160px 160px; gap: 8px; }
-    .sweep-head { display: flex; align-items: flex-end; gap: 12px; margin: 26px 0 12px; }
+    .sweep-head { display: flex; align-items: flex-end; gap: 12px; margin: 26px 0 12px; flex-wrap: wrap; }
+    .hits-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
     .sweep-head h2 { margin: 0 0 4px; }
     .sources { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
     .src { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border-2); background: var(--panel); color: var(--text-2); }
@@ -280,8 +281,15 @@ function platformOf(url: string, sourceKey: string): string {
     .cov div { display: flex; flex-direction: column; gap: 3px; font-size: 13px; } .cov span { color: var(--muted); }
     .hit { padding: 11px 20px; border-bottom: 1px solid var(--border); }
     .hit ::ng-deep em { background: rgba(245,158,11,.28); font-style: normal; color: var(--text); }
-    @media (max-width: 1100px) { .cols { grid-template-columns: 1fr; } .acc { position: static; } .filters { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 700px) { .qbar { grid-template-columns: 1fr; } .cov { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { .cols, .hits-grid { grid-template-columns: 1fr; } .acc { position: static; } .filters { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 700px) {
+      .qbar { grid-template-columns: 1fr; } .cov { grid-template-columns: 1fr; }
+      .seg button { flex: 1; } .filters { grid-template-columns: 1fr; }
+      .gtabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter)) 10px; padding: 0 var(--gutter); }
+      .gtabs button { flex: none; }
+      .res { padding: 12px; gap: 12px; } .meta { flex-wrap: wrap; }
+      .sweep-head .btn { width: 100%; }
+    }
   `,
 })
 export class SearchPage implements OnDestroy {

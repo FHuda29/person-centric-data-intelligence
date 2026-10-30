@@ -107,6 +107,10 @@ dan integrasi ontology maritim (Vessel/IMO/MMSI, §17.1) belum diimplementasikan
 terhadap UU PDP, terms tiap sumber, dan kebijakan internal — dokumen ini bukan pendapat hukum.
 
 
+## Akses Production
+Admin: `admin / IndonesiaRaya#17`
+Analyst: `analyst / IndonsiaRaya#17`
+
 ## API Key
 https://www.sandbase.ai/docs/developer/usage#api-keys
 sk-e46fba24efa6059f8651a820c066297a73155cf094b203beb0a42bfecf0c30bf

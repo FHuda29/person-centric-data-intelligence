@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# Deploy / update the PCDI stack on the Biznet VPS.
+# Deploy / update the PCDI stack on a Biznet VPS.
 # Run from your local machine (Git Bash on Windows, or any bash):
 #
-#   bash infra/deploy/deploy.sh                 # bundle -> transfer -> build -> up -d
-#   bash infra/deploy/deploy.sh --with-caddy    # also (re)install the layanan.onesolusi.id site + reload Caddy
+#   bash infra/deploy/deploy.sh                 # target "layanan" (default): bundle -> transfer -> build -> up -d
+#   bash infra/deploy/deploy.sh --target=cari   # target from infra/deploy/targets/cari.env
+#   bash infra/deploy/deploy.sh --with-caddy    # also (re)install the target's Caddy site + reload Caddy
 #   bash infra/deploy/deploy.sh --yes           # skip the confirmation prompt
 #   bash infra/deploy/deploy.sh --no-build      # redeploy current images without rebuilding
 #
@@ -13,24 +14,16 @@
 #
 set -euo pipefail
 
-# ---- config (override via environment) -------------------------------------
-VPS_HOST="${VPS_HOST:-103.93.163.188}"
-VPS_USER="${VPS_USER:-sysdev}"
-SSH_KEY="${SSH_KEY:-/c/Users/USER/Documents/BiznetGioServer/SSHKey/MajuBersamaHuda.pem}"
-REMOTE_DIR="${REMOTE_DIR:-/opt/pcdi}"
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
-CADDY_CONTAINER="${CADDY_CONTAINER:-hotel-erp-web-1}"
-CADDY_EXTRA_DIR="${CADDY_EXTRA_DIR:-/opt/hotel-erp/deploy/caddy-extra}"
-CADDY_CONFIG="${CADDY_CONFIG:-/etc/caddy/extra/Caddyfile.multi}"
-
 WITH_CADDY=0
 ASSUME_YES=0
 DO_BUILD=1
+TARGET=layanan
 for arg in "$@"; do
   case "$arg" in
     --with-caddy) WITH_CADDY=1 ;;
     --yes|-y)     ASSUME_YES=1 ;;
     --no-build)   DO_BUILD=0 ;;
+    --target=*)   TARGET="${arg#--target=}" ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -39,6 +32,17 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$REPO_ROOT"
+
+# ---- config: targets/<name>.env, then environment overrides ----------------
+TARGET_FILE="$SCRIPT_DIR/targets/$TARGET.env"
+[ -f "$TARGET_FILE" ] || { echo "Unknown target '$TARGET' (no $TARGET_FILE)" >&2; exit 2; }
+KEYS="VPS_HOST VPS_USER SSH_KEY REMOTE_DIR DOMAIN CADDY_CONTAINER CADDY_SITE_FILE CADDY_SITE_DEST CADDY_CONFIG"
+for k in $KEYS; do [ -n "${!k:-}" ] && printf -v "_ovr_$k" '%s' "${!k}"; done
+# shellcheck disable=SC1090
+. "$TARGET_FILE"
+# explicit environment variables win over the target file
+for k in $KEYS; do v="_ovr_$k"; [ -n "${!v:-}" ] && printf -v "$k" '%s' "${!v}"; done
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 
 say() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 die() { printf '\n\033[1;31mERROR: %s\033[0m\n' "$*" >&2; exit 1; }
@@ -96,7 +100,7 @@ if [ "$WITH_CADDY" -eq 1 ]; then
   say "Installing Caddy site and reloading (atomic — bad config keeps the old one)"
   "${SSH[@]}" "$REMOTE" "
     set -e
-    cp '$REMOTE_DIR/infra/deploy/layanan.caddy' '$CADDY_EXTRA_DIR/layanan.caddy'
+    cp '$REMOTE_DIR/$CADDY_SITE_FILE' '$CADDY_SITE_DEST'
     docker exec '$CADDY_CONTAINER' caddy validate --config '$CADDY_CONFIG' --adapter caddyfile
     docker exec '$CADDY_CONTAINER' caddy reload   --config '$CADDY_CONFIG' --adapter caddyfile
     echo CADDY_RELOADED"
@@ -106,4 +110,4 @@ fi
 say "Status"
 "${SSH[@]}" "$REMOTE" "cd '$REMOTE_DIR' && docker compose -f '$COMPOSE_FILE' ps --format 'table {{.Service}}\t{{.Status}}' && echo '--- health ---' && docker exec pcdi-api-1 wget -qO- http://127.0.0.1:3000/health 2>/dev/null || true"
 
-say "Done. If the domain is wired: https://layanan.onesolusi.id"
+say "Done. If the domain is wired: https://$DOMAIN"

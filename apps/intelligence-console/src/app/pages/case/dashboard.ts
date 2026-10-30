@@ -150,14 +150,14 @@ import { CaseContext } from './case-context';
   styles: `
     .dash { display: flex; flex-direction: column; gap: 16px; padding-top: 24px; }
     .stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-    .tile { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); min-width: 0; }
+    .tile { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 50%), var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); min-width: 0; }
     .tile-h { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); min-width: 0; }
     .tile > b { font-size: 26px; font-weight: 600; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
     .ti { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; flex: none; background: color-mix(in srgb, currentColor 15%, transparent); }
     .cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr); gap: 16px; align-items: start; }
     .bottom { grid-template-columns: minmax(300px, 1fr) minmax(0, 2.2fr); align-items: start; }
     .seeds { display: flex; flex-direction: column; }
-    .card-title { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; min-height: 28px; }
+    .card-title { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; min-height: 28px; flex-wrap: wrap; row-gap: 8px; }
     .card-title h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
     .count { font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--panel-3); border-radius: 999px; padding: 1px 8px; }
     .seed-form { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; gap: 8px; }
@@ -180,7 +180,14 @@ import { CaseContext } from './case-context';
     .jobs .in { margin-top: 4px; }
     @media (max-width: 1280px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     @media (max-width: 1000px) { .cols, .bottom { grid-template-columns: 1fr; } .seed-form { grid-template-columns: 1fr; } }
-    @media (max-width: 600px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .tile { padding: 12px 14px; gap: 8px; } .tile > b { font-size: 22px; }
+      .seed-form.sec { grid-template-columns: minmax(0, 1fr) auto; } .seed-form.sec select { grid-column: 1 / -1; }
+      .share { grid-template-columns: minmax(0, 1fr) 88px; } .share button { grid-column: 1 / -1; }
+      .seed-actions { flex-wrap: wrap; }
+      .bt .bar { width: 60px; }
+    }
   `,
 })
 

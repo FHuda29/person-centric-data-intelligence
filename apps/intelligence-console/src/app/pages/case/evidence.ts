@@ -9,7 +9,7 @@ import { CaseContext } from './case-context';
   selector: 'app-evidence',
   imports: [FormsModule, UiIcon],
   template: `
-    <div class="ev">
+    <div class="ev" [class.has-sel]="!!sel()">
       <div class="list">
         <div class="list-head">
           <div class="row">
@@ -33,6 +33,7 @@ import { CaseContext } from './case-context';
       </div>
       <div class="view">
         @if (sel(); as e) {
+          <button class="ghost sm back" (click)="back()"><ui-icon name="chevron" [size]="14" />All evidence</button>
           <h2 class="break">{{ e.title || 'Evidence ' + e.id.slice(0, 8) }}</h2>
           <dl class="kv mt">
             <dt>Evidence ID</dt><dd class="mono">{{ e.id }}</dd>
@@ -88,7 +89,16 @@ import { CaseContext } from './case-context';
     .placeholder h3 { margin-bottom: 6px; }
     blockquote { margin: 0; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--panel); border-radius: 0 10px 10px 0; white-space: pre-wrap; font-size: 13.5px; line-height: 1.6; }
     .raw { background: #06090d; border: 1px solid var(--border); border-radius: 10px; padding: 14px; max-height: 420px; overflow: auto; font: 11.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all; }
-    @media (max-width: 900px) { .ev { grid-template-columns: 1fr; } }
+    .back { display: none; margin: -6px 0 10px -8px; }
+    .back ui-icon { transform: rotate(180deg); }
+    @media (max-width: 900px) {
+      .ev { grid-template-columns: 1fr; }
+      .list { border-right: 0; }
+      .view { padding: 20px var(--gutter); }
+      /* master-detail: list first, detail replaces it once an item is chosen */
+      .ev:not(.has-sel) .view, .ev.has-sel .list { display: none; }
+      .back { display: inline-flex; }
+    }
   `,
 })
 export class EvidencePage {
@@ -127,6 +137,11 @@ export class EvidencePage {
 
   open(id: string) {
     void this.router.navigate([], { queryParams: { id }, replaceUrl: true });
+  }
+
+  back() {
+    this.sel.set(null);
+    void this.router.navigate([], { queryParams: { id: null }, replaceUrl: true });
   }
 
   async show(id: string) {

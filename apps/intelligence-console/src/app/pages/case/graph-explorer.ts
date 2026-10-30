@@ -18,8 +18,10 @@ interface GEdge { id: string; from: string; to: string; type: string; confidence
   selector: 'app-graph-explorer',
   imports: [FormsModule, RouterLink, EntIcon, EntityPanel, UiIcon],
   template: `
-    <div class="gx" [class.open]="!!selected() || !!selectedEdge()">
+    <div class="gx" [class.open]="!!selected() || !!selectedEdge()" [class.filters]="filtersOpen()">
       <aside class="left">
+        <div class="row only-narrow lh"><h4 class="grow">Filters & layout</h4>
+          <button class="ghost sm" (click)="filtersOpen.set(false)" aria-label="Close filters"><ui-icon name="close" [size]="15" /></button></div>
         <h4>Entity types</h4>
         @for (t of types; track t) {
           <label class="check typ" [class.dim]="!counts()[t]">
@@ -58,16 +60,17 @@ interface GEdge { id: string; from: string; to: string; type: string; confidence
 
       <section class="center">
         <div class="toolbar">
+          <button class="sm only-narrow" (click)="filtersOpen.set(!filtersOpen()); $event.stopPropagation()"><ui-icon name="filter" [size]="14" />Filters</button>
           <div class="find"><ui-icon name="search" [size]="14" />
             <input placeholder="Find node…" [ngModel]="find()" (ngModelChange)="find.set($event); highlight()" /></div>
-          <span class="small muted ellipsis" [title]="stats()">{{ stats() }}</span>
+          <span class="small muted ellipsis stats" [title]="stats()">{{ stats() }}</span>
           <span class="spacer"></span>
           @if (pathFrom()) { <span class="small">Path from <b>{{ nodeLabel(pathFrom()!) }}</b> — select target</span><button class="sm ghost" (click)="pathFrom.set(null)">cancel</button> }
           @if (focusMode()) { <button class="sm" (click)="loadAll()">Show whole case</button> }
           <div class="tb-group">
-            <button class="sm ghost" (click)="fit()" title="Fit to screen"><ui-icon name="fit" [size]="15" />Fit</button>
-            <button class="sm ghost" (click)="load()" title="Reload graph"><ui-icon name="refresh" [size]="15" />Refresh</button>
-            <button class="sm ghost" (click)="png()" title="Export PNG"><ui-icon name="download" [size]="15" />PNG</button>
+            <button class="sm ghost" (click)="fit()" title="Fit to screen"><ui-icon name="fit" [size]="15" /><span class="tl">Fit</span></button>
+            <button class="sm ghost" (click)="load()" title="Reload graph"><ui-icon name="refresh" [size]="15" /><span class="tl">Refresh</span></button>
+            <button class="sm ghost" (click)="png()" title="Export PNG"><ui-icon name="download" [size]="15" /><span class="tl">PNG</span></button>
           </div>
         </div>
         <div #cy class="cy"></div>
@@ -76,7 +79,8 @@ interface GEdge { id: string; from: string; to: string; type: string; confidence
         }
         <div class="legend tiny">
           <span><i class="ln"></i> confirmed</span><span><i class="ln dash"></i> candidate</span><span><i class="ln red"></i> rejected</span>
-          <span class="sep"></span><span><kbd>Click</kbd> profile</span><span><kbd>Right-click</kbd> transforms</span><span><kbd>Double-click</kbd> expand</span>
+          <span class="sep hints"></span><span class="hints"><kbd>Click</kbd> profile</span><span class="hints"><kbd>Right-click</kbd> transforms</span><span class="hints"><kbd>Double-click</kbd> expand</span>
+          <span class="sep touch"></span><span class="touch">Tap · long-press for transforms</span>
         </div>
       </section>
 
@@ -153,8 +157,26 @@ interface GEdge { id: string; from: string; to: string; type: string; confidence
     .ln.dash { border-top-style: dashed; } .ln.red { border-top-color: #b04040; }
     kbd { justify-self: start; font: 500 11px var(--sans); color: var(--text-2); background: var(--panel-2); border: 1px solid var(--border-2); border-bottom-width: 2px;
       border-radius: 6px; padding: 2px 7px; text-align: center; }
+    .only-narrow, .touch { display: none; }
+    .lh { margin-bottom: 8px; } .lh h4 { margin: 0; color: var(--text); }
     @media (max-width: 1280px) { .gx.open { grid-template-columns: 220px minmax(0, 1fr) 340px; } .gx { grid-template-columns: 220px minmax(0, 1fr); } }
-    @media (max-width: 1100px) { .gx { grid-template-columns: 1fr; grid-auto-rows: auto 70vh auto; } }
+    @media (max-width: 1100px) {
+      .gx, .gx.open { position: relative; grid-template-columns: minmax(0, 1fr); min-height: 420px; overflow: hidden; }
+      .only-narrow { display: inline-flex; }
+      .left { position: absolute; z-index: 6; top: 0; bottom: 0; left: 0; width: min(300px, 86%); transform: translateX(-105%);
+        transition: transform .22s var(--ease); box-shadow: var(--shadow-lg); }
+      .gx.filters .left { transform: none; }
+      .gx:not(.open) .right { display: none; }
+      .right { position: absolute; z-index: 7; left: 0; right: 0; bottom: 0; max-height: 62%; border-left: 0; border-top: 1px solid var(--border-2);
+        border-radius: 18px 18px 0 0; box-shadow: var(--shadow-lg); animation: sheet .22s var(--ease); padding: 18px 16px; }
+      .center { grid-column: 1; grid-row: 1; }
+      .toolbar { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
+      .find { flex: 1; min-width: 140px; } .find input { width: 100%; }
+      .stats { order: 5; flex-basis: 100%; }
+      .legend { left: 10px; right: 10px; bottom: 10px; flex-wrap: wrap; gap: 6px 12px; border-radius: 12px; }
+    }
+    @media (max-width: 767px) { .tl { display: none; } .tb-group button { width: 34px; padding: 0; } }
+    @media (pointer: coarse) { .hints { display: none; } .touch { display: inline; } .touch.sep { display: inline-block; } }
   `,
 })
 export class GraphExplorer implements AfterViewInit, OnDestroy {
@@ -183,6 +205,7 @@ export class GraphExplorer implements AfterViewInit, OnDestroy {
   selectedEdge = signal<GEdge | null>(null);
   pathFrom = signal<string | null>(null);
   focusMode = signal(false);
+  filtersOpen = signal(false);
   stats = signal('');
   menu = signal<{ id: string; x: number; y: number; label: string; transforms: any[] } | null>(null);
   newType = 'PERSON';
@@ -231,9 +254,15 @@ export class GraphExplorer implements AfterViewInit, OnDestroy {
         this.selectedEdge.set(null);
       }
       this.menu.set(null);
+      this.filtersOpen.set(false);
     });
     this.cy.on('dbltap', 'node', (e) => void this.expand(e.target.id(), 1));
     this.cy.on('cxttap', 'node', (e) => void this.openMenu(e.target.id(), e.originalEvent as MouseEvent));
+    // touch devices have no right-click: long-press opens the same transform menu
+    this.cy.on('taphold', 'node', (e) => {
+      const r = this.host().nativeElement.getBoundingClientRect();
+      void this.openMenu(e.target.id(), { clientX: r.left + e.renderedPosition.x, clientY: r.top + e.renderedPosition.y });
+    });
     document.addEventListener('click', this.closeMenu);
     void this.load();
   }
@@ -479,11 +508,11 @@ export class GraphExplorer implements AfterViewInit, OnDestroy {
     }
   }
 
-  async openMenu(id: string, ev: MouseEvent) {
+  async openMenu(id: string, ev: { clientX: number; clientY: number }) {
     try {
       const transforms = await this.api.get<any[]>(`/entities/${id}/transforms`);
-      const x = Math.min(ev.clientX, window.innerWidth - 300);
-      const y = Math.min(ev.clientY, window.innerHeight - 200);
+      const x = Math.max(8, Math.min(ev.clientX, window.innerWidth - 300));
+      const y = Math.max(8, Math.min(ev.clientY, window.innerHeight - 200));
       this.menu.set({ id, x, y, label: this.nodeLabel(id), transforms });
     } catch (e) {
       this.toast.error(e);

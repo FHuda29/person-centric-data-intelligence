@@ -132,6 +132,9 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1"]
       interval: 10s
       retries: 30
+    networks:
+      default:
+        aliases: [pcdi-api]   # nginx upstream (see infra/docker/nginx.conf)
     restart: unless-stopped
 
   worker:
